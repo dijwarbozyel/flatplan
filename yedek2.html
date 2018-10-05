@@ -1,0 +1,532 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Test Map</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="shortcut icon" type="image/x-icon" href="favicon.ico" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css">
+
+    <link rel="stylesheet" href="./src/L.Control.MousePosition.css">
+    <script src="src/flatplan.js"></script>
+    <script>
+        getDatafromUrl1();
+    </script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script src="https://unpkg.com/leaflet@1.3.4/dist/leaflet.js" integrity="sha512-nMMmRyTVoLYqjP9hrbed9S+FzjZHW5gY1TWCHA5ckwXZBadntCNs8kEqAWdrb9O7rxbCaA4lKTIWjDXZxflOcA=="
+        crossorigin=""></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.3.4/dist/leaflet.css" integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA=="
+        crossorigin="" />
+    <style>
+
+        html, body {
+			height: 100%;
+			margin: 0;
+		}
+		#map {
+			width: 100%;
+			height: 100%;
+            background-color: #fff;
+		}
+		#selectStatus {
+            position: absolute;
+            top: 30px;
+			left: 50px;
+            text-align: center;
+            z-index: 100;
+            display: block;
+        }
+		.just-padding {
+            position: absolute;
+            top: 10px;
+			left: 10px;
+            z-index:1000;
+            padding: 15px;
+        }
+
+        .list-group.list-group-root {
+        padding: 0;
+        overflow: hidden;
+        }
+
+        .list-group.list-group-root .list-group {
+        margin-bottom: 0;
+        }
+
+        .list-group.list-group-root .list-group-item {
+        border-radius: 0;
+        border-width: 1px 0 0 0;
+        }
+
+        .list-group.list-group-root > .list-group-item:first-child {
+        border-top-width: 0;
+        }
+
+        .list-group.list-group-root > .list-group > .list-group-item {
+        padding-left: 30px;
+        }
+
+        .list-group.list-group-root > .list-group > .list-group > .list-group-item {
+        padding-left: 45px;
+        }
+
+        .list-group-item .glyphicon {
+        margin-right: 5px;
+        
+        }
+
+        #groups {
+        font-size: medium;
+        }
+        .carousel-control.left, 
+.carousel-control.right {
+    background-image: none
+}
+	</style>
+
+    <style>
+        .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; } .info h4 { margin: 0 0 5px; color: #777; }
+.legend { text-align: left; line-height: 18px; color: #555; } .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }</style>
+</head>
+
+<body>
+    <div id='map'>
+    </div>
+    <script src="src/L.Control.MousePosition.js"> </script>
+    <script type="text/javascript" src="us-states.js"></script>
+    <script type="text/javascript" src="./data/data.js"></script>
+    <script type="text/javascript">
+
+        var tempFlats = [];
+        var index = 0;
+        var map = L.map('map', {
+            center: [4.5, 8],
+            zoom: 7,
+            minZoom: 6,
+            zoomControl: false
+        });
+
+
+        var yeni;
+        setLayers(data);
+
+
+        function getLevel(id) {
+            map.clearLayers();
+            data = id == 1 ? eksi2 :
+                id == 2 ? eksi3 :
+                    id == 3 ? eksi4 :
+                        id == 4 ? eksi5 : eksi6;
+            setLayers(data);
+        }
+
+        function style(feature) {
+            return {
+                weight: 0.4,
+                opacity: 1,
+                color: '#666',
+                fillOpacity: 0.7,
+                fillColor: getColor(feature.properties.Status)
+            };
+        }
+
+        function styleforRoad(feature) {
+            return {
+                weight: 0.4,
+                opacity: 1,
+                color: '#666',
+                fillOpacity: 0.7,
+                fillColor: getColor(feature.properties.Status)
+            };
+        }
+
+        function styleforBorder(feature) {
+            return {
+                weight: 1,
+                opacity: 1,
+                color: 'green',
+                fillOpacity: 0.7,
+                fillColor: getColor(feature.properties.Status)
+            };
+        }
+
+        function highlightFeature(e) {
+
+            var layer = e.target;
+            layer.toggleTooltip();
+            layer.setStyle({
+                weight: 5,
+                color: '#666',
+                dashArray: '',
+                fillOpacity: 0.7,
+                fillColor: 'blue'
+            });
+
+            if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {
+                layer.bringToFront();
+            }
+        }
+
+        var geojson;
+
+        function resetHighlight(e) {
+
+            var layer = e.target;
+            layer.setStyle({
+                weight: 0.4,
+                opacity: 1,
+                color: '#666',
+                fillOpacity: 0.7,
+                fillColor: getColor(layer.feature.properties.Status)
+            });
+            geojson.resetStyle(e.target);
+        }
+
+
+        function zoomToFeature(e) {
+            map.fitBounds(e.target.getBounds());
+        }
+
+
+        var currentLayer;
+        var drawwedFlats = [];
+        var index = 0;
+        function onEachFeature(feature, layer) {
+            layer.on({
+                //mouseover: highlightFeature,
+                //mouseout: resetHighlight,
+                click: function (e) {
+                    var layer1 = e.target;
+                    currentLayer = layer1;
+                    console.log(layer1);
+                    $('#myModal').modal();
+                    document.getElementById("name").innerHTML = layer1.feature.properties.EntityHandle;
+                }
+            });
+
+        }
+
+
+
+        function setLayers(level) {
+            for (var i = 0; i < level.features.length; i++) {
+                if (level.features[i].properties.Layer != "plot id 2" && level.features[i].properties.Layer != "Plots ID's DCCA" && level.features[i].properties.Layer != "Plot ID's" && level.features[i].properties.Layer != "MAF_SYMBOLS" &&
+                    level.features[i].properties.Layer != "Proposed Metro Alignment" && level.features[i].properties.Layer != "_Sub Phase Boundary" && level.features[i].properties.Layer != "Open Space" &&
+                    level.features[i].properties.Layer != "Phase A Boundary" && level.features[i].properties.Layer != "No print" && level.features[i].properties.Layer != "Community Parks" &&
+                    level.features[i].properties.Layer != "Contexts" && level.features[i].properties.Layer != "Water body" && level.features[i].properties.Layer != "Utility" &&
+                    level.features[i].properties.Layer != "TH 3 BR - End 1") {
+
+                    if (level.features[i].properties.Layer == "ROW") {
+                        geojson = L.geoJson(level.features[i], {
+                            style: styleforRoad,
+                        }).addTo(map);
+                    }
+                    else if (level.features[i].properties.Layer == "Luxury Villa 5 BR" || level.features[i].properties.Layer == "Luxury Villa 4 BR" ||
+                        level.features[i].properties.Layer == "Luxury Villa 6 BR" || level.features[i].properties.Layer == "Bungalow 5 BR" ||
+                        level.features[i].properties.Layer == "Upper Luxury Villa 5 BR" || level.features[i].properties.Layer == "Upper Luxury Villa 6 BR" ||
+                        level.features[i].properties.Layer == "Neighbourhood park" || level.features[i].properties.Layer == "_Open Space" ||
+                        level.features[i].properties.Layer == "Phase A Boundary" || level.features[i].properties.Layer == "Mixed Use" ||
+                        level.features[i].properties.Layer == "Sikka"
+                    ) {
+                        level.features[i].properties.Status = level.features[i].properties.Layer;
+                        geojson = L.geoJson(level.features[i], {
+                            style: styleforRoad,
+                        }).addTo(map);
+                    }
+                    else {
+                        level.features[i].properties.id = i;
+                        for (var j = 0; j < flats.length; j++) {
+                            if (flats[j][0] == level.features[i].properties.EntityHandle) {
+                                level.features[i].properties.Status = flats[j][1];
+                            }
+                        }
+
+                        tempFlats[index] = level.features[i];
+                        //console.log(tempFlats[index].properties.Status, level.features[i].properties.Status);
+                        index++;
+                        geojson = L.geoJson(level.features[i], {
+                            style: style,
+                            onEachFeature: onEachFeature
+                        }).bindTooltip(level.features[i].properties.EntityHandle + ", " + level.features[i].properties.Status).addTo(map);
+                    }
+                }
+            }
+        }
+
+        function getColor(d) {
+            //console.log(d);
+            return d == "Available" ? 'green' :
+                d == "Sale Pending" ? 'blue' :
+                    d == "Sold" ? 'red' :
+                        d == "Reservation Pending" ? 'yellow' :
+                            d == "Neighbourhood park" ? "rgb(190,201,166)" :
+                                d == "_Open Space" ? "blue" :
+                                    d == "_Sub Phase Boundary" ? "blue" : "gray";
+        }
+        var legend = L.control({ position: 'bottomright' });
+
+        legend.onAdd = function (map) {
+
+            var div = L.DomUtil.create('div', 'info legend'),
+                grades = ["Sold", "Not Sold"],
+                labels = [],
+                from, to;
+
+            labels.push(
+                '<i style="background:' + getColor("Available") + '"></i> ' + 'Available');
+            labels.push(
+                '<i style="background:' + getColor("Sale Pending") + '"></i> ' + 'Sale Pending');
+            labels.push(
+                '<i style="background:' + getColor("Sold") + '"></i> ' + 'Sold');
+            labels.push(
+                '<i style="background:' + getColor("Reservation Pending") + '"></i> ' + 'Reservation Pending');
+            div.innerHTML = labels.join('<br>');
+            return div;
+        };
+
+        legend.addTo(map);
+
+        function getStatus() {
+            var query = $('#selectStatus').val();
+            var j = 0;
+            map.eachLayer(function (layer) {
+                layer.feature != undefined ? (layer.feature.geometry.type == "GeometryCollection" ?
+                    (layer.feature.properties.Status == query ? (layer.setStyle({ fillColor: getColor(layer.feature.properties.Status) })) : layer.setStyle({ fillColor: "white" })) : "") : "";
+
+            });
+        }
+
+        function highlightFeatures(e) {
+            for (var i = 0; i < e.length; i++) {
+                geojson = L.geoJson(e[i], {
+                    style: style,
+                    onEachFeature: onEachFeature
+                }).bindTooltip(e[i].properties.EntityHandle + ", " + e[i].properties.Status).addTo(map);
+            }
+
+        }
+
+        function Update() {
+            try {
+
+
+            }
+            catch (e) {
+                console.log(e);
+            }
+            //data.features[currentLayer.feature.properties.id].properties.rentState = rentState.selectedIndex;
+            //var newcolor = rentState.selectedIndex == 0 ? getColor(0) : getColor(1);
+            //currentLayer.setStyle({ fillColor: (newcolor) });
+            $('#myModal').modal('toggle');
+        }
+
+        $(function () {
+
+            $('.list-group-item').on('click', function () {
+
+                $('.glyphicon', this)
+                    .toggleClass('glyphicon-chevron-right')
+                    .toggleClass('glyphicon-chevron-down');
+                if (this.name == "q2") {
+                    legend._container.innerHTML = '<i style="background:' + getColor("Available") + '"></i> ' + '4 BR' + '<br>' +
+                        '<i style="background:' + getColor("Sale Pending") + '"></i> ' + '5 BR' + '<br>' +
+                        '<i style="background:' + getColor("Sold") + '"></i> ' + '6 BR' + '<br>';
+                }
+                else if (this.name == "q3") {
+                    legend._container.innerHTML = '<i style="background:' + getColor("Available") + '"></i> ' + 'Luxury' + '<br>' +
+                        '<i style="background:' + getColor("Sale Pending") + '"></i> ' + 'Upper Luxury' + '<br>' +
+                        '<i style="background:' + getColor("Sold") + '"></i> ' + 'Bungalow' + '<br>';
+                }
+                else {
+                    legend._container.innerHTML = '<i style="background:' + getColor("Available") + '"></i> ' + 'Available' + '<br>' +
+                        '<i style="background:' + getColor("Sale Pending") + '"></i> ' + 'Sale Pending' + '<br>' +
+                        '<i style="background:' + getColor("Sold") + '"></i> ' + 'Sold' + '<br>' +
+                        '<i style="background:' + getColor("Reservation Pending") + '"></i> ' + 'Reservation Pending' + '<br>';
+                }
+            });
+        });
+
+        var querying = ["", "Available", "Sold", "Sale Pending", "Reservation Pending", "4 BR", "5 BR", "6 BR", "Luxury", "Upper Luxur", "Bungalow"];
+
+        var currentStatus = querying[0];
+        var currentRoom = querying[0];
+        var currentType = querying[0];
+
+        function getFilter(id) {
+            if (id > 0 && id < 5)
+                currentStatus = querying[id];
+            else if (id > 4 && id < 8)
+                currentRoom = querying[id];
+            else
+                currentType = querying[id];
+
+            console.log(currentStatus, currentRoom, currentType);
+            var query = querying[id];
+            var j = 0;
+            if (currentStatus != "") {
+                map.eachLayer(function (layer) {
+
+                    layer.feature != undefined ? (layer.feature.geometry.type == "GeometryCollection" ?
+                        (layer.feature.properties.Status == currentStatus && layer.feature.properties.Layer.includes(currentRoom) && layer.feature.properties.Layer.includes(currentType) ? (layer.setStyle({ fillColor: getColor(layer.feature.properties.Status) })) : layer.setStyle({ fillColor: "white" })) : "") : "";
+                    /*
+                                        else {
+                                            layer.feature != undefined ? (layer.feature.geometry.type == "GeometryCollection" ?
+                                                (layer.feature.properties.Status == currentStatus ? (layer.setStyle({ fillColor: getColor(layer.feature.properties.Status) })) : layer.setStyle({ fillColor: "white" })) : "") : "";
+                    
+                                        } */
+                });
+            }
+        }
+    </script>
+    <div class="row col-centered">
+
+        <div class="just-padding">
+            <div class="list-group list-group-root well" id="theList">
+
+                <a name="q1" href="#item-1" class="list-group-item" data-toggle="collapse" id="groups">
+                    <i class="glyphicon glyphicon-chevron-right"></i>Filter by Status
+                </a>
+                <div class="list-group collapse" id="item-1">
+
+                    <a onclick='return getFilter(1)' class="list-group-item " data-toggle="collapse" id="item">
+                        Available
+                    </a>
+
+                    <a onclick='return getFilter(2)' class="list-group-item" data-toggle="collapse" id="item">
+                        Sold
+                    </a>
+
+                    <a onclick='return getFilter(3)' class="list-group-item" data-toggle="collapse" id="item">
+                        Sale Pending
+                    </a>
+                    <a onclick='return getFilter(4)' class="list-group-item" data-toggle="collapse" id="item">
+                        Reservation Pending
+                    </a>
+
+                </div>
+
+                <a name="q2" href="#item-2" class="list-group-item" data-toggle="collapse" id="groups">
+                    <i class="glyphicon glyphicon-chevron-right"></i>Filter by Rooms
+                </a>
+                <div class="list-group collapse" id="item-2">
+
+                    <a onclick='return getFilter(5)' class="list-group-item" data-toggle="collapse" id="item">
+                        4 BR
+                    </a>
+
+                    <a onclick='return getFilter(6)' class="list-group-item" data-toggle="collapse" id="item">
+                        5 BR
+                    </a>
+
+
+                    <a onclick='return getFilter(7)' class="list-group-item" data-toggle="collapse" id="item">
+                        6 BR
+                    </a>
+
+                </div>
+
+
+                <a name="q3" href="#item-3" class="list-group-item" data-toggle="collapse" id="groups">
+                    <i class="glyphicon glyphicon-chevron-right"></i>Filter by Type
+                </a>
+                <div class="list-group collapse" id="item-3">
+
+                    <a onclick='return getFilter(8)' class="list-group-item" data-toggle="collapse" id="item">
+                        Luxury
+                    </a>
+
+                    <a onclick='return getFilter(9)' class="list-group-item" data-toggle="collapse" id="item">
+                        Upper Luxury
+                    </a>
+
+                    <a onclick='return getFilter(10)' class="list-group-item" data-toggle="collapse" id="item">
+                        Bungalow
+                    </a>
+
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="modal fade" id="myModal" role="dialog">
+            <div class="modal-dialog modal-lg">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <button type="button" class="close" data-dismiss="modal">&times;</button>
+                        <h4 class="modal-title" id="name">Status Window</h4>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-md-8">
+                                <div id="myCarousel" class="carousel slide" data-ride="carousel">
+                                    <!-- Indicators -->
+                                    <ol class="carousel-indicators">
+                                        <li data-target="#myCarousel" data-slide-to="0" class="active"></li>
+                                        <li data-target="#myCarousel" data-slide-to="1"></li>
+                                        <li data-target="#myCarousel" data-slide-to="2"></li>
+                                        <li data-target="#myCarousel" data-slide-to="3"></li>
+                                        <li data-target="#myCarousel" data-slide-to="4"></li>
+                                    </ol>
+
+                                    <!-- Wrapper for slides -->
+                                    <div class="carousel-inner">
+                                        <div class="item active">
+                                            <img src="./images/1.jpg" alt="Los Angeles" style="width:100%;">
+                                        </div>
+
+                                        <div class="item">
+                                            <img src="./images/2.jpg" alt="Chicago" style="width:100%;">
+                                        </div>
+
+                                        <div class="item">
+                                            <img src="./images/3.jpg" alt="New york" style="width:100%;">
+                                        </div>
+
+                                        <div class="item">
+                                            <img src="./images/4.jpg" alt="New york" style="width:100%;">
+                                        </div>
+
+                                        <div class="item">
+                                            <img src="./images/5.jpg" alt="New york" style="width:100%;">
+                                        </div>
+                                    </div>
+
+                                    <!-- Left and right controls -->
+                                    <a class="left carousel-control" href="#myCarousel" data-slide="prev">
+                                        <span class="glyphicon glyphicon-chevron-left"></span>
+                                        <span class="sr-only">Previous</span>
+                                    </a>
+                                    <a class="right carousel-control" href="#myCarousel" data-slide="next">
+                                        <span class="glyphicon glyphicon-chevron-right"></span>
+                                        <span class="sr-only">Next</span>
+                                    </a>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <h4>Flat Details</h3>
+                                    <ul class="list-group">
+                                        <li >Cras justo odio</li>
+                                        <li >Dapibus ac facilisis in</li>
+                                        <li >Morbi leo risus</li>
+                                        <li >Porta ac consectetur ac</li>
+                                        <li >Vestibulum at eros</li>
+                                    </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-success" onclick="Update()">Create Opportunity</button>
+                        <button type="button" class="btn btn-success" onclick="Update()">Create Lead</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
